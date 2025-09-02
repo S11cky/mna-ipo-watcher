@@ -1,57 +1,59 @@
+# -*- coding: utf-8 -*-
 def build_ipo_alert(ipo: dict) -> str:
-    """Vytvorenie textu alertu pre Telegram na základe IPO dát so strategickım pohladom"""
+    """Vytvorenie textu alertu pre Telegram na zÃ¡klade IPO dÃ¡t so strategickÃ½m pohladom"""
     
-    # Získanie dát z IPO dictu
+    # ZÃ­skanie dÃ¡t z IPO dictu
     company = ipo["company_name"]
     ticker = ipo["ticker"]
     price = ipo["price_usd"]
     market_cap = ipo["market_cap_usd"]
     free_float = ipo.get("free_float_pct", 0)
     insiders_total_pct = ipo.get("insiders_total_pct", 0)
-    ipo_date = ipo.get("ipo_first_trade_date", "Neznámy")
-    days_to_lockup = ipo.get("days_to_lockup", "Neznámy")
+    ipo_date = ipo.get("ipo_first_trade_date", "NeznÃ¡my")
+    days_to_lockup = ipo.get("days_to_lockup", "NeznÃ¡my")
     
-    # Zaokrúhlenie hodnôt na rozumnı pocet desatinnıch miest
+    # ZaokrÃºhlenie hodnÃ´t na rozumnÃ½ pocet desatinnÃ½ch miest
     price = round(price, 2)
-    market_cap = round(market_cap / 1e9, 2)  # Trhová kapitalizácia v miliardách USD
+    market_cap = round(market_cap / 1e9, 2)  # TrhovÃ¡ kapitalizÃ¡cia v miliardÃ¡ch USD
     free_float = round(free_float, 2)
     insiders_total_pct = round(insiders_total_pct, 2)
     
-    # Vıpocty pre optimálny vstup a vıstup (Buy band a Exit band)
-    buy_band_lower = round(price * 0.85, 2)  # 15% pod aktuálnou cenou
-    buy_band_upper = round(price * 0.90, 2)  # 10% pod aktuálnou cenou
-    exit_band_lower = round(price * 1.10, 2)  # 10% nad aktuálnou cenou
-    exit_band_upper = round(price * 1.20, 2)  # 20% nad aktuálnou cenou
+    # VÃ½pocty pre optimÃ¡lny vstup a vÃ½stup (Buy band a Exit band)
+    buy_band_lower = round(price * 0.85, 2)  # 15% pod aktuÃ¡lnou cenou
+    buy_band_upper = round(price * 0.90, 2)  # 10% pod aktuÃ¡lnou cenou
+    exit_band_lower = round(price * 1.10, 2)  # 10% nad aktuÃ¡lnou cenou
+    exit_band_upper = round(price * 1.20, 2)  # 20% nad aktuÃ¡lnou cenou
     
-    # Definovanie stratégie (strategickı pohlad)
+    # Definovanie stratÃ©gie (strategickÃ½ pohlad)
     strategy = ""
     if free_float > 70:
-        strategy += "?? **Silnı Free Float**: Tento IPO má silnı free float, co môe naznacovat vyššiu likviditu a väcší záujem o akcie. Môe to byt vhodná príleitost na nákup. "
+        strategy += "?? **SilnÃ½ Free Float**: Tento IPO mÃ¡ silnÃ½ free float, co mÃ´Å¾e naznacovat vyÅ¡Å¡iu likviditu a vÃ¤cÅ¡Ã­ zÃ¡ujem o akcie. MÃ´Å¾e to byt vhodnÃ¡ prÃ­leÅ¾itost na nÃ¡kup. "
     if insiders_total_pct < 10:
-        strategy += "?? **Nízkı Insider Ownership**: Niší podiel insiderov môe znamenat nišiu dôveru zo strany zakladatelov a zamestnancov. "
+        strategy += "?? **NÃ­zkÃ½ Insider Ownership**: NiÅ¾Å¡Ã­ podiel insiderov mÃ´Å¾e znamenat niÅ¾Å¡iu dÃ´veru zo strany zakladatelov a zamestnancov. "
 
-    # Odhat krátkodobého a dlhodobého zisku
-    short_term_profit = f"**Krátkodobı ciel**: Cena môe vzrást o 10% a 20% v krátkom horizonte po IPO. Odhadovanı vıstup medzi {exit_band_lower} a {exit_band_upper} USD."
-    long_term_profit = f"**Dlhodobı ciel**: Ak spolocnost uspeje v raste, cena akcie môe dosiahnut 25% a 50% zisk v priebehu nasledujúcich 12-18 mesiacov."
+    # Odhat krÃ¡tkodobÃ©ho a dlhodobÃ©ho zisku
+    short_term_profit = f"**KrÃ¡tkodobÃ½ ciel**: Cena mÃ´Å¾e vzrÃ¡st o 10% aÅ¾ 20% v krÃ¡tkom horizonte po IPO. OdhadovanÃ½ vÃ½stup medzi {exit_band_lower} a {exit_band_upper} USD."
+    long_term_profit = f"**DlhodobÃ½ ciel**: Ak spolocnost uspeje v raste, cena akcie mÃ´Å¾e dosiahnut 25% aÅ¾ 50% zisk v priebehu nasledujÃºcich 12-18 mesiacov."
 
-    # Vytvorenie formátovaného textu pre alert bez rizikovıch faktorov
+    # Vytvorenie formÃ¡tovanÃ©ho textu pre alert bez rizikovÃ½ch faktorov
     message = f"""
 ?? IPO Alert - {company} ({ticker})
 
 ?? **Cena akcie**: {price} USD
-?? **Market Cap**: {market_cap} miliárd USD
+?? **Market Cap**: {market_cap} miliÃ¡rd USD
 ?? **Free Float**: {free_float}%
 ?? **Insider %**: {insiders_total_pct}%
-?? **IPO Dátum**: {ipo_date}
-?? **Lock-up**: {days_to_lockup} dní
+?? **IPO DÃ¡tum**: {ipo_date}
+?? **Lock-up**: {days_to_lockup} dnÃ­
 
-?? **Optimálny vstup do pozície (Buy Band)**: {buy_band_lower} - {buy_band_upper} USD
-?? **Optimálny vıstup z pozície (Exit Band)**: {exit_band_lower} - {exit_band_upper} USD
+?? **OptimÃ¡lny vstup do pozÃ­cie (Buy Band)**: {buy_band_lower} - {buy_band_upper} USD
+?? **OptimÃ¡lny vÃ½stup z pozÃ­cie (Exit Band)**: {exit_band_lower} - {exit_band_upper} USD
 
-?? **Strategickı pohlad**: 
+?? **StrategickÃ½ pohlad**: 
 {strategy}
 
-?? **Krátkodobá stratégia**: {short_term_profit}
-?? **Dlhodobá stratégia**: {long_term_profit}
+?? **KrÃ¡tkodobÃ¡ stratÃ©gia**: {short_term_profit}
+?? **DlhodobÃ¡ stratÃ©gia**: {long_term_profit}
 """
     return message
+
