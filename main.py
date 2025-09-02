@@ -9,17 +9,17 @@ from ipo_alerts import build_ipo_alert  # Import z ipo_alerts.py
 from typing import List, Dict, Any
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# Parametre pre Small Cap a cena akcie = 50 USD
+# Parametre pre Small Cap a cena akcie ≤ 50 USD
 MAX_PRICE = 50  # Zvýšená cena akcie
 MIN_MARKET_CAP = 5e8  # Minimálna trhová kapitalizácia 500 miliónov USD
 
-# Vybrané sektory pre filtrovanie IPO spolocností
+# Vybrané sektory pre filtrovanie IPO spoločností
 SECTORS = ["Technológie", "Biotechnológia", "AI", "Zelené technológie", "FinTech", "E-commerce", "HealthTech", "SpaceTech", "Autonómne vozidlá", "Cybersecurity", "Agritech", "EdTech", "RetailTech"]
 
 # Nastavenie logovania
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Zoznam investorov (napr. VC, Top spolocnosti, Billionaires)
+# Zoznam investorov (napr. VC, Top spoločnosti, Billionaires)
 VC_FUNDS = ['Vanguard Group Inc.', 'Sequoia Capital', 'Andreessen Horowitz', 'Benchmark', 'Greylock Partners', 'Insight Partners']
 TOP_COMPANIES = ['Apple', 'Microsoft', 'Google', 'Amazon', 'Facebook', 'Berkshire Hathaway']
 TOP_BILLIONAIRES = ['Elon Musk', 'Jeff Bezos', 'Bill Gates', 'Warren Buffett', 'Mark Zuckerberg']
@@ -31,7 +31,7 @@ def send_telegram(message: str) -> bool:
     chat_id = os.getenv('TG_CHAT_ID')
     
     if not token or not chat_id:
-        logging.error("Chýbajúce Telegram credentials!")
+        logging.error("Chybajuce Telegram credentials!")
         return False
     
     url = f"https://api.telegram.org/bot{token}/sendMessage"
@@ -44,13 +44,13 @@ def send_telegram(message: str) -> bool:
     try:
         response = requests.post(url, json=payload, timeout=5)  # Timeout na 5 sekúnd pre API volania
         if response.status_code == 200:
-            logging.info(f"Správa úspešne odoslaná: {message[:50]}...")  # Zobrazit len prvých 50 znakov správy
+            logging.info(f"Sprava uspesne odoslana: {message[:50]}...")  # Zobraziť len prvých 50 znakov správy
             return True
         else:
-            logging.error(f"Chyba pri odosielaní správy: {response.status_code}")
+            logging.error(f"Chyba pri odosielani spravy: {response.status_code}")
             return False
     except Exception as e:
-        logging.error(f"Chyba pri odosielaní Telegram správy: {e}")
+        logging.error(f"Chyba pri odosielani Telegram spravy: {e}")
         return False
 
 def fetch_ipo_data(ticker: str) -> Dict[str, Any]:
@@ -67,36 +67,36 @@ def fetch_ipo_data(ticker: str) -> Dict[str, Any]:
                     if any(sector in sector_name for sector_name in SECTORS):
                         return snap
                     else:
-                        logging.warning(f"Ignorované IPO {ticker} – sektor mimo požiadaviek.")
+                        logging.warning(f"Ignorovane IPO {ticker} – sektor mimo poziadaviek.")
                 else:
-                    logging.warning(f"Ignorované IPO {ticker} – cena alebo market cap je mimo kritérií.")
+                    logging.warning(f"Ignorovane IPO {ticker} – cena alebo market cap je mimo kriterii.")
             else:
-                logging.warning(f"Neúplné dáta pre {ticker}, ignorované.")
+                logging.warning(f"Neuplne data pre {ticker}, ignorovane.")
         else:
-            logging.warning(f"Neboli získané dáta pre {ticker}")
+            logging.warning(f"Neboli ziskane data pre {ticker}")
     except Exception as e:
-        logging.error(f"Chyba pri spracovaní {ticker}: {e}")
+        logging.error(f"Chyba pri spracovani {ticker}: {e}")
     return None
 
 def fetch_and_filter_ipo_data(tickers: List[str]) -> List[Dict[str, Any]]:
     """Fetch IPO data for multiple tickers using multithreading"""
     ipo_data = []
-    with ThreadPoolExecutor(max_workers=20) as executor:  # Zvýšený pocet workerov na 20
+    with ThreadPoolExecutor(max_workers=20) as executor:  # Zvýšený počet workerov na 20
         futures = {executor.submit(fetch_ipo_data, ticker): ticker for ticker in tickers}
         for future in as_completed(futures):
             ipo = future.result()
             if ipo:
                 ipo_data.append(ipo)
 
-    logging.info(f"Celkový pocet filtrovaných IPO: {len(ipo_data)}")
+    logging.info(f"Celkovy pocet filtrovanych IPO: {len(ipo_data)}")
     return ipo_data
 
 def send_alerts():
     tickers = ["GTLB", "ABNB", "PLTR", "SNOW", "DDOG", "U", "NET", "ASAN", "PATH"]
     
-    logging.info(f"Zacínam monitorovat {len(tickers)} IPO spolocností...")
+    logging.info(f"Zacinam monitorovat {len(tickers)} IPO spolocnosti...")
     
-    # Nacítanie údajov o spolocnostiach a filtrovanie
+    # Načítanie údajov o spoločnostiach a filtrovanie
     ipo_data = fetch_and_filter_ipo_data(tickers)
     
     # Poslanie alertov len pre filtrované IPO
@@ -107,21 +107,20 @@ def send_alerts():
             # Odoslanie správy na Telegram
             success = send_telegram(ipo_msg)
             if success:
-                logging.info(f"Alert pre {ipo['ticker']} úspešne odoslaný.")
+                logging.info(f"Alert pre {ipo['ticker']} uspesne odoslany.")
             else:
-                logging.error(f"Chyba pri odosielaní alertu pre {ipo['ticker']}")
+                logging.error(f"Chyba pri odosielani alertu pre {ipo['ticker']}")
         except Exception as e:
-            logging.error(f"Chyba pri vytváraní alertu pre {ipo['ticker']}: {e}")
+            logging.error(f"Chyba pri vytvarani alertu pre {ipo['ticker']}: {e}")
     
-    logging.info("Proces dokoncený.")
+    logging.info("Proces dokonceny.")
 
-# Nastavenie casovaca na spúštanie každých 15 minút
+# Nastavenie časovača na spúšťanie každých 15 minút
 schedule.every(15).minutes.do(send_alerts)
 
-# Spustenie plánovaca
+# Spustenie plánovača
 if __name__ == "__main__":
     logging.info("Skript sa spustil.")
     while True:
         schedule.run_pending()
         time.sleep(60)  # Skontroluje úlohy každú minútu
-
