@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import sqlite3
 conn = sqlite3.connect('mna_watch.db')
 c = conn.cursor()
@@ -19,3 +20,4 @@ c.execute('CREATE INDEX IF NOT EXISTS ix_events_dt ON events(dt);')
 conn.commit()
 conn.close()
 print("DB initialized: mna_watch.db")
+
