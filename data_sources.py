@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-data_sources.py – reálne dostupné zdroje (Yahoo Finance)
+data_sources.py - realne dostupne zdroje (Yahoo Finance)
 - cena, market cap, free float, insider %
-- IPO dátum ~ prvı obchodnı den (odhad)
-- Lock-up rátame 180 dní od IPO, ak je u po lock-upe ? None
+- IPO datum ~ prvy obchodny den (odhad)
+- Lock-up ratame 180 dni od IPO, ak je uz po lock-upe -> None
 """
 
 from datetime import date, timedelta
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Optional
 import math
 import yfinance as yf
 import pandas as pd
@@ -45,7 +45,7 @@ def fetch_company_snapshot(ticker: str) -> Dict[str, Any]:
     elif insiders_total_pct is not None:
         free_float_pct = max(0.0, 100.0 - insiders_total_pct)
 
-    # IPO dátum = prvı den s dátami
+    # IPO datum = prvy den s datami
     try:
         hist = t.history(period="max")
         ipo_date = hist.index.min().date() if not hist.empty else None
@@ -57,7 +57,7 @@ def fetch_company_snapshot(ticker: str) -> Dict[str, Any]:
         lockup_end = ipo_date + timedelta(days=LOCKUP_DAYS_DEFAULT)
         today = date.today()
         d = (lockup_end - today).days
-        # ak u lock-up skoncil ? None
+        # ak uz lock-up skoncil -> None
         if d >= 0 and (today - ipo_date).days <= LOCKUP_DAYS_DEFAULT:
             days_to_lockup = d
 
