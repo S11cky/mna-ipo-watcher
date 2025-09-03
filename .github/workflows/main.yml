@@ -8,7 +8,7 @@ on:
 jobs:
   run-watcher:
     runs-on: ubuntu-latest
-    timeout-minutes: 10  # Timeout po 10 minútach
+    timeout-minutes: 360  # 6 hodín - maximálny povolený čas
     
     steps:
     - name: Checkout code
