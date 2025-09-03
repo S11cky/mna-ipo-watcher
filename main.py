@@ -4,14 +4,15 @@ import os
 import requests
 import schedule
 import time
-from data_sources import fetch_company_snapshot  # Import z data_sources.py
-from ipo_alerts import build_ipo_alert  # Import z ipo_alerts.py
+from data_sources import fetch_company_snapshot
+from ipo_alerts import build_ipo_alert
+from db_utils import already_sent_recently, mark_as_sent
 from typing import List, Dict, Any
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Parametre pre Small Cap a cena akcie ≤ 50 USD
-MAX_PRICE = 50  # Zvýšená cena akcie
-MIN_MARKET_CAP = 5e8  # Minimálna trhová kapitalizácia 500 miliónov USD
+MAX_PRICE = 50
+MIN_MARKET_CAP = 5e8
 
 # Vybrané sektory pre filtrovanie IPO spoločností
 SECTORS = ["Technológie", "Biotechnológia", "AI", "Zelené technológie", "FinTech", "E-commerce", "HealthTech", "SpaceTech", "Autonómne vozidlá", "Cybersecurity", "Agritech", "EdTech", "RetailTech"]
@@ -19,7 +20,7 @@ SECTORS = ["Technológie", "Biotechnológia", "AI", "Zelené technológie", "Fin
 # Nastavenie logovania
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Zoznam investorov (napr. VC, Top spoločnosti, Billionaires)
+# Zoznam investorov
 VC_FUNDS = ['Vanguard Group Inc.', 'Sequoia Capital', 'Andreessen Horowitz', 'Benchmark', 'Greylock Partners', 'Insight Partners']
 TOP_COMPANIES = ['Apple', 'Microsoft', 'Google', 'Amazon', 'Facebook', 'Berkshire Hathaway']
 TOP_BILLIONAIRES = ['Elon Musk', 'Jeff Bezos', 'Bill Gates', 'Warren Buffett', 'Mark Zuckerberg']
@@ -42,9 +43,9 @@ def send_telegram(message: str) -> bool:
     }
 
     try:
-        response = requests.post(url, json=payload, timeout=5)  # Timeout na 5 sekúnd pre API volania
+        response = requests.post(url, json=payload, timeout=5)
         if response.status_code == 200:
-            logging.info(f"Sprava uspesne odoslana: {message[:50]}...")  # Zobraziť len prvých 50 znakov správy
+            logging.info(f"Sprava uspesne odoslana: {message[:50]}...")
             return True
         else:
             logging.error(f"Chyba pri odosielani spravy: {response.status_code}")
@@ -81,7 +82,7 @@ def fetch_ipo_data(ticker: str) -> Dict[str, Any]:
 def fetch_and_filter_ipo_data(tickers: List[str]) -> List[Dict[str, Any]]:
     """Fetch IPO data for multiple tickers using multithreading"""
     ipo_data = []
-    with ThreadPoolExecutor(max_workers=20) as executor:  # Zvýšený počet workerov na 20
+    with ThreadPoolExecutor(max_workers=20) as executor:
         futures = {executor.submit(fetch_ipo_data, ticker): ticker for ticker in tickers}
         for future in as_completed(futures):
             ipo = future.result()
@@ -102,14 +103,20 @@ def send_alerts():
     # Poslanie alertov len pre filtrované IPO
     for ipo in ipo_data:
         try:
-            ipo_msg = build_ipo_alert(ipo)  # Opravené volanie funkcie, teraz správne s argumentom ipo
+            # KONTROLA DUPLIKÁTOV - či už nebolo odoslané v posledných 24h
+            if already_sent_recently(ipo['ticker']):
+                logging.info(f"Preskakujem {ipo['ticker']} - uz bolo odoslane v poslednych 24h")
+                continue
             
-            # Odoslanie správy na Telegram
+            ipo_msg = build_ipo_alert(ipo)
             success = send_telegram(ipo_msg)
+            
             if success:
                 logging.info(f"Alert pre {ipo['ticker']} uspesne odoslany.")
+                mark_as_sent(ipo)  # OZNAČÍME AKO ODOSLANÉ
             else:
                 logging.error(f"Chyba pri odosielani alertu pre {ipo['ticker']}")
+                
         except Exception as e:
             logging.error(f"Chyba pri vytvarani alertu pre {ipo['ticker']}: {e}")
     
@@ -123,4 +130,4 @@ if __name__ == "__main__":
     logging.info("Skript sa spustil.")
     while True:
         schedule.run_pending()
-        time.sleep(60)  # Skontroluje úlohy každú minútu
+        time.sleep(60)
