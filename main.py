@@ -2,7 +2,6 @@
 import logging
 import os
 import requests
-import schedule
 import time
 from data_sources import fetch_company_snapshot
 from ipo_alerts import build_ipo_alert
@@ -43,12 +42,13 @@ def send_telegram(message: str) -> bool:
     }
 
     try:
-        response = requests.post(url, json=payload, timeout=5)
+        response = requests.post(url, json=payload, timeout=10)  # Zvýšený timeout na 10s
         if response.status_code == 200:
             logging.info(f"Sprava uspesne odoslana: {message[:50]}...")
             return True
         else:
             logging.error(f"Chyba pri odosielani spravy: {response.status_code}")
+            logging.error(f"Odpoved: {response.json()}")
             return False
     except Exception as e:
         logging.error(f"Chyba pri odosielani Telegram spravy: {e}")
@@ -82,7 +82,7 @@ def fetch_ipo_data(ticker: str) -> Dict[str, Any]:
 def fetch_and_filter_ipo_data(tickers: List[str]) -> List[Dict[str, Any]]:
     """Fetch IPO data for multiple tickers using multithreading"""
     ipo_data = []
-    with ThreadPoolExecutor(max_workers=20) as executor:
+    with ThreadPoolExecutor(max_workers=10) as executor:  # Znížený počet workerov na 10
         futures = {executor.submit(fetch_ipo_data, ticker): ticker for ticker in tickers}
         for future in as_completed(futures):
             ipo = future.result()
@@ -101,6 +101,7 @@ def send_alerts():
     ipo_data = fetch_and_filter_ipo_data(tickers)
     
     # Poslanie alertov len pre filtrované IPO
+    alert_count = 0
     for ipo in ipo_data:
         try:
             # KONTROLA DUPLIKÁTOV - či už nebolo odoslané v posledných 24h
@@ -113,21 +114,23 @@ def send_alerts():
             
             if success:
                 logging.info(f"Alert pre {ipo['ticker']} uspesne odoslany.")
-                mark_as_sent(ipo)  # OZNAČÍME AKO ODOSLANÉ
+                mark_as_sent(ipo)
+                alert_count += 1
             else:
                 logging.error(f"Chyba pri odosielani alertu pre {ipo['ticker']}")
                 
         except Exception as e:
             logging.error(f"Chyba pri vytvarani alertu pre {ipo['ticker']}: {e}")
     
-    logging.info("Proces dokonceny.")
+    logging.info(f"Proces dokonceny. Odoslanych alertov: {alert_count}")
 
-# Nastavenie časovača na spúšťanie každých 15 minút
-schedule.every(15).minutes.do(send_alerts)
-
-# Spustenie plánovača
+# ZMENENÉ: Jednorazové spustenie namiesto nekonečnej slučky
 if __name__ == "__main__":
     logging.info("Skript sa spustil.")
-    while True:
-        schedule.run_pending()
-        time.sleep(60)
+    
+    start_time = time.time()
+    send_alerts()
+    end_time = time.time()
+    
+    duration = end_time - start_time
+    logging.info(f"Skript ukonceny. Celkovy cas: {duration:.2f} sekund")
